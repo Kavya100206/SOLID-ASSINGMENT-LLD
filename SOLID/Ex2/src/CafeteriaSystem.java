@@ -5,38 +5,48 @@ public class CafeteriaSystem {
     private final FileStore store = new FileStore();
     private int invoiceSeq = 1000;
 
-    public void addToMenu(MenuItem i) { menu.put(i.id, i); }
+    // new components
+    private final BillingCalculator calculator = new BillingCalculator();
+    private final InvoiceBuilder builder = new InvoiceBuilder();
 
-    // Intentionally SRP-violating: menu mgmt + tax + discount + format + persistence.
+    public void addToMenu(MenuItem i) {
+        menu.put(i.id, i);
+    }
+
     public void checkout(String customerType, List<OrderLine> lines) {
         String invId = "INV-" + (++invoiceSeq);
-        StringBuilder out = new StringBuilder();
-        out.append("Invoice# ").append(invId).append("\n");
 
-        double subtotal = 0.0;
-        for (OrderLine l : lines) {
-            MenuItem item = menu.get(l.itemId);
-            double lineTotal = item.price * l.qty;
-            subtotal += lineTotal;
-            out.append(String.format("- %s x%d = %.2f\n", item.name, l.qty, lineTotal));
-        }
+        // 1. Calculations
+        double subtotal = calculator.calculateSubtotal(menu, lines);
 
         double taxPct = TaxRules.taxPercent(customerType);
-        double tax = subtotal * (taxPct / 100.0);
+        double tax = calculator.calculateTax(customerType, subtotal);
 
-        double discount = DiscountRules.discountAmount(customerType, subtotal, lines.size());
+        double discount = calculator.calculateDiscount(
+                customerType, subtotal, lines.size()
+        );
 
         double total = subtotal + tax - discount;
 
-        out.append(String.format("Subtotal: %.2f\n", subtotal));
-        out.append(String.format("Tax(%.0f%%): %.2f\n", taxPct, tax));
-        out.append(String.format("Discount: -%.2f\n", discount));
-        out.append(String.format("TOTAL: %.2f\n", total));
+        // 2. Build invoice text
+        String printable = builder.build(
+                invId,
+                menu,
+                lines,
+                subtotal,
+                tax,
+                taxPct,
+                discount,
+                total
+        );
 
-        String printable = InvoiceFormatter.identityFormat(out.toString());
+        // 3. Output
         System.out.print(printable);
 
+        // 4. Persistence
         store.save(invId, printable);
-        System.out.println("Saved invoice: " + invId + " (lines=" + store.countLines(invId) + ")");
+        System.out.println(
+                "Saved invoice: " + invId + " (lines=" + store.countLines(invId) + ")"
+        );
     }
 }
