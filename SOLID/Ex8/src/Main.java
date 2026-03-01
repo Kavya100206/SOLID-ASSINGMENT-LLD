@@ -1,11 +1,13 @@
 public class Main {
     public static void main(String[] args) {
-        System.out.println("=== Club Admin ===");
-        BudgetLedger ledger = new BudgetLedger();
-        MinutesBook minutes = new MinutesBook();
-        EventPlanner events = new EventPlanner();
 
-        ClubConsole console = new ClubConsole(ledger, minutes, events);
+        TreasurerTool treasurer = new TreasurerTool();
+        SecretaryTool secretary = new SecretaryTool();
+        EventLeadTool eventLead = new EventLeadTool();
+
+        ClubConsole console =
+                new ClubConsole(treasurer, secretary, eventLead);
+
         console.run();
     }
 }

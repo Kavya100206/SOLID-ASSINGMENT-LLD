@@ -1,22 +1,35 @@
 public class EvaluationPipeline {
-    // DIP violation: high-level module constructs concretes directly
-    public void evaluate(Submission sub) {
-        Rubric rubric = new Rubric();
-        PlagiarismChecker pc = new PlagiarismChecker();
-        CodeGrader grader = new CodeGrader();
-        ReportWriter writer = new ReportWriter();
 
-        int plag = pc.check(sub);
-        System.out.println("PlagiarismScore=" + plag);
+    private Grader grader;
+    private PlagiarismService plagiarismService;
+    private ReportService reportService;
 
-        int code = grader.grade(sub, rubric);
-        System.out.println("CodeScore=" + code);
+    // Dependency Injection via constructor
+    public EvaluationPipeline(
+            Grader grader,
+            PlagiarismService plagiarismService,
+            ReportService reportService) {
 
-        String reportName = writer.write(sub, plag, code);
-        System.out.println("Report written: " + reportName);
+        this.grader = grader;
+        this.plagiarismService = plagiarismService;
+        this.reportService = reportService;
+    }
 
-        int total = plag + code;
-        String result = (total >= 90) ? "PASS" : "FAIL";
+    public void evaluate(Submission submission) {
+
+        System.out.println("=== Evaluation Pipeline ===");
+
+        int plagiarismScore = plagiarismService.check(submission);
+        System.out.println("PlagiarismScore=" + plagiarismScore);
+
+        int codeScore = grader.grade(submission);
+        System.out.println("CodeScore=" + codeScore);
+
+        reportService.writeReport(submission, plagiarismScore, codeScore);
+
+        int total = plagiarismScore + codeScore;
+        String result = total >= 50 ? "PASS" : "FAIL";
+
         System.out.println("FINAL: " + result + " (total=" + total + ")");
     }
 }
